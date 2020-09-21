@@ -242,9 +242,9 @@ while True:
         else:
             count2 += 1
 
-    print('no_x'(no_x))
-    print('xvalues'(xvalues))
-    print('motion'(motion))
+    print('no_x'+str(no_x))
+    print('xvalues'+str(xvalues))
+    print('motion'+str(motion))
 
     # Draw framerate in corner of frame
     cv2.putText(frame, 'FPS: {0:.2f}'.format(frame_rate_calc), (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2,cv2.LINE_AA)
