@@ -12,6 +12,21 @@ xvalues = list()
 count1 = 0
 count2= 0
 
+def find_majority(k):
+    myMap = {}
+    maximum = ('', 0)  # (occurring element, occurrences)
+    for n in k:
+        if n in myMap:
+            myMap[n] += 1
+        else:
+            myMap[n] = 1
+
+        # Keep track of maximum on the go
+        if myMap[n] > maximum[1]: maximum = (n, myMap[n])
+
+    return maximum
+
+
 # Define VideoStream class to handle streaming of video from webcam in separate processing thread
 # Source - Adrian Rosebrock, PyImageSearch: https://www.pyimagesearch.com/2015/12/28/increasing-raspberry-pi-fps-with-python-and-opencv/
 class VideoStream:
@@ -195,7 +210,7 @@ while True:
                 cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (10, 255, 0), 2)
 
                 xvalues.append(xmin)
-                
+
                 # Draw label
 
 
@@ -212,14 +227,21 @@ while True:
                 #print('xmax' + str(xmax))
 
     no_x = len(xvalues)
-    
+
     if (no_x > 2):
         difference = xvalues[no_x - 1] - xvalues[no_x - 2]
         if (difference > 0):
             motion.append(1)
         else:
             motion.append(0)
-    
+            
+    if (no_x > 5):
+        val, times = find_majority(motion)
+        if val == 1 and times >= 15:
+            count1 += 1
+        else:
+            count2 += 1
+
     print('no_x'(no_x))
     print('xvalues'(xvalues))
     print('motion'(motion))
