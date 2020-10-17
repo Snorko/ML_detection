@@ -7,19 +7,40 @@ import time
 from threading import Thread
 import importlib.util
 
+flag = False
+motion = list()
+xvalues = list()
+count1 = 0
+count2 = 0
 
-# Define VideoStream class to handle streaming of video from webcam in separate processing thread
-# Source - Adrian Rosebrock, PyImageSearch: https://www.pyimagesearch.com/2015/12/28/increasing-raspberry-pi-fps-with-python-and-opencv/
+
+def find_majority(k):
+    myMap = {}
+    maximum = ('', 0)  # (occurring element, occurrences)
+    for n in k:
+        if n in myMap:
+            myMap[n] += 1
+        else:
+            myMap[n] = 1
+
+        # Keep track of maximum on the go
+        if myMap[n] > maximum[1]: maximum = (n, myMap[n])
+
+    return maximum
+
+
+
+
 class VideoStream:
 
-    def __init__(self, resolution=(640,480), framerate=30):
+    def __init__(self, resolution=(640, 480), framerate=30):
         # Initialize the PiCamera and the camera image stream
         self.stream = cv2.VideoCapture(0)
         ret = self.stream.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         ret = self.stream.set(3, resolution[0])
         ret = self.stream.set(4, resolution[1])
 
-        # Read first frame from the stream 
+        # Read first frame from the stream
         (self.grabbed, self.frame) = self.stream.read()
 
         # Variable to control when the camera is stopped
@@ -150,14 +171,15 @@ time.sleep(1)
 # for frame1 in camera.capture_continuous(rawCapture, format="bgr",use_video_port=True):
 while True:
 
+
     # Start timer (for calculating frame rate)
     t1 = cv2.getTickCount()
 
     # Grab frame from video stream
-    frame1 = videostream.read()
+    frame = videostream.read()
 
     # Acquire frame and resize to expected shape [1xHxWx3]
-    frame = frame1.copy()
+    #frame = frame1.copy()
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     frame_resized = cv2.resize(frame_rgb, (width, height))
     input_data = np.expand_dims(frame_resized, axis=0)
@@ -186,32 +208,80 @@ while True:
             ymax = int(min(imH, (boxes[i][2] * imH)))
             xmax = int(min(imW, (boxes[i][3] * imW)))
 
+            avg_score = (xmax+xmin)/2
+
             object_name = labels[int(classes[i])]  # Look up object name from "labels" array using class index
             if (object_name == 'person'):
                 cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (10, 255, 0), 2)
 
+                #xvalues.append(xmin)
+                mid = (xmin+xmax)/2
                 # Draw label
-
-
+                print('xmin '+str(boxes[i][1] * imW))
+                print('xmax ' + str(boxes[i][3] * imW))
+                print('flag ' + str(flag))
+                print('mid '+ str(avg_score))
                 label = '%s: %d%%' % (object_name, int(scores[i] * 100))  # Example: 'person: 72%'
                 labelSize, baseLine = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)  # Get font size
                 label_ymin = max(ymin, labelSize[1] + 10)  # Make sure not to draw label too close to top of window
-                cv2.rectangle(frame, (xmin, label_ymin - labelSize[1] - 10),
-                              (xmin + labelSize[0], label_ymin + baseLine - 10), (255, 255, 255),
-                              cv2.FILLED)  # Draw white box to put label text in
-                cv2.putText(frame, label, (xmin, label_ymin - 7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0),2)  # Draw label text
-                print('ymin' + str(ymin))
-                print('xmin' + str(xmin))
-                print('ymax' + str(ymax))
-                print('xmax' + str(xmax))
+                #cv2.rectangle(frame, (xmin, label_ymin - labelSize[1] - 10),
+                #              (xmin + labelSize[0], label_ymin + baseLine - 10), (255, 255, 255),
+                #              cv2.FILLED)  # Draw white box to put label text in
+                cv2.putText(frame, label, (xmin, label_ymin - 7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0),
+                            2)  # Draw label text
+                # print('ymin' + str(ymin))
+                # print('xmin' + str(xmin))
+                # print('ymax' + str(ymax))
+                # print('xmax' + str(xmax))
+
+    if ((mid > 500) and (mid < 760)):
+        flag = True
+    #no_x = len(xvalues)
+
+    #if (no_x > 2):
+    #    difference = xvalues[no_x - 1] - xvalues[no_x - 2]
+    #    if (difference > 0):
+    #        motion.append(1)
+    #    else:
+    #        motion.append(0)
+
+    #if (no_x > 5):
+    #    val, times = find_majority(motion)
+    #    if val == 1 and times >= 15:
+    #        count1 += 1
+    #    else:
+    #        count2 += 1
+
+    #print('no_x' + str(no_x))
+    #print('xvalues' + str(xvalues))
+    #print('motion' + str(motion))
+
+    if flag is True:
+        if mid<500:
+            count1 +=1
+            flag = False
+
+        elif mid>760:
+            count2 +=1
+            flag = False
+
 
     # Draw framerate in corner of frame
-    cv2.putText(frame, 'FPS: {0:.2f}'.format(frame_rate_calc), (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2,
+
+    #frame = cv2.resize(frame, None, None, fx=0.5, fy=0.5)
+    cv2.putText(frame, 'FPS: {0:.2f}'.format(frame_rate_calc), (60, 80), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2,
                 cv2.LINE_AA)
-    frame = cv2.resize(frame, None, None, fx=0.5, fy=0.5)
+    cv2.line(frame, (500, 0), (500, 720), (0, 255, 0), 2)
+    cv2.line(frame, (760, 0), (760, 720), (0, 255, 0), 2)
+    cv2.putText(frame, "In: {}".format(count1), (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+    cv2.putText(frame, "Out: {}".format(count2), (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
     # All the results have been drawn on the frame, so it's time to display it.
     cv2.imshow('Object detector', frame)
-
+    
+#    print('xmin '+str(boxes[i][1] * imW))
+#    print('xmax ' + str(boxes[i][3] * imW))
+#    print('flag ' + str(flag))
+#    print('mid '+ str(avg_score))
     # Calculate framerate
     t2 = cv2.getTickCount()
     time1 = (t2 - t1) / freq
@@ -220,6 +290,9 @@ while True:
     # Press 'q' to quit
     if cv2.waitKey(1) == ord('q'):
         break
+    if cv2.waitKey(1) == ord('r'):
+        count1 = 0
+        count2 = 0
 
 # Clean up
 cv2.destroyAllWindows()
